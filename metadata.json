@@ -1,0 +1,5 @@
+{
+  "name": "TeamUp",
+  "description": "A platform for finding collaborators, teammates, and project partners.",
+  "requestFramePermissions": ["camera"]
+}

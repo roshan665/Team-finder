@@ -1,0 +1,182 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "User profile information including skills and stats.",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string" },
+        "name": { "type": "string" },
+        "email": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "bio": { "type": "string" },
+        "skills": { "type": "array", "items": { "type": "string" } },
+        "trustScore": { "type": "number" },
+        "githubUsername": { "type": "string" },
+        "githubReposCount": { "type": "number" },
+        "role": { "type": "string", "enum": ["user", "admin"] },
+        "hasCompletedProfile": { "type": "boolean" },
+        "isVerified": { "type": "boolean" },
+        "college": { "type": "string" },
+        "year": { "type": "string" },
+        "enrollmentNo": { "type": "string" },
+        "branch": { "type": "string" }
+      },
+      "required": ["uid", "name", "email"]
+    },
+    "Organization": {
+      "title": "Organization",
+      "description": "A college or organization.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "domain": { "type": "string" }
+      },
+      "required": ["name", "domain"]
+    },
+    "VerifiedStudent": {
+      "title": "VerifiedStudent",
+      "description": "A verified student enrollment number and branch for an organization.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "enrollmentNo": { "type": "string" },
+        "branch": { "type": "string" },
+        "instituteName": { "type": "string" },
+        "organizationId": { "type": "string" },
+        "verifiedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["name", "enrollmentNo", "branch", "instituteName", "organizationId"]
+    },
+    "Hackathon": {
+      "title": "Hackathon",
+      "description": "A hackathon event.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "name": { "type": "string" },
+        "date": { "type": "string" },
+        "location": { "type": "string" },
+        "teamCount": { "type": "number" },
+        "status": { "type": "string", "enum": ["active", "upcoming", "completed"] }
+      },
+      "required": ["name", "date", "location"]
+    },
+    "JoinRequest": {
+      "title": "JoinRequest",
+      "description": "A request to join a team.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "teamId": { "type": "string" },
+        "teamName": { "type": "string" },
+        "leaderId": { "type": "string" },
+        "applicantId": { "type": "string" },
+        "applicantName": { "type": "string" },
+        "message": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teamId", "applicantId", "status"]
+    },
+    "Invitation": {
+      "title": "Invitation",
+      "description": "An invitation to join a team.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "teamId": { "type": "string" },
+        "teamName": { "type": "string" },
+        "leaderId": { "type": "string" },
+        "leaderName": { "type": "string" },
+        "inviteeId": { "type": "string" },
+        "inviteeName": { "type": "string" },
+        "status": { "type": "string", "enum": ["pending", "accepted", "rejected"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["teamId", "inviteeId", "status"]
+    },
+    "Team": {
+      "title": "Team",
+      "description": "A team formed for a hackathon.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "ownerId": { "type": "string" },
+        "ownerName": { "type": "string" },
+        "title": { "type": "string" },
+        "description": { "type": "string" },
+        "hackathonId": { "type": "string" },
+        "hackathonName": { "type": "string" },
+        "neededSkills": { "type": "array", "items": { "type": "string" } },
+        "members": { "type": "array", "items": { "type": "string" } },
+        "status": { "type": "string", "enum": ["recruiting", "full", "completed"] },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["ownerId", "title", "hackathonId"]
+    },
+    "Message": {
+      "title": "Message",
+      "description": "A message in a team chat.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "teamId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "senderName": { "type": "string" },
+        "text": { "type": "string" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "A notification for a user.",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string" },
+        "userId": { "type": "string" },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "type": { "type": "string" },
+        "read": { "type": "boolean" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      }
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/teams/{teamId}": {
+      "schema": "Team",
+      "description": "Team listings"
+    },
+    "/teams/{teamId}/messages/{messageId}": {
+      "schema": "Message",
+      "description": "Team chat messages"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    },
+    "/hackathons/{hackathonId}": {
+      "schema": "Hackathon",
+      "description": "Hackathon events"
+    },
+    "/joinRequests/{requestId}": {
+      "schema": "JoinRequest",
+      "description": "Requests to join teams"
+    },
+    "/organizations/{orgId}": {
+      "schema": "Organization",
+      "description": "Organizations/Colleges"
+    },
+    "/verifiedStudents/{studentId}": {
+      "schema": "VerifiedStudent",
+      "description": "Verified student emails"
+    }
+  }
+}

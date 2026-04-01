@@ -1,0 +1,181 @@
+// ===============================================================
+// Assumed Data Model
+// ===============================================================
+//
+// Collection: users
+// Document ID: userId (auth.uid)
+// Fields:
+//   - uid: string (required)
+//   - name: string (required)
+//   - email: string (required)
+//   - photoURL: string
+//   - bio: string
+//   - skills: list
+//   - trustScore: number
+//   - githubUsername: string
+//   - githubReposCount: number
+//   - role: string (user/admin)
+//   - hasCompletedProfile: bool
+//   - isVerified: bool
+//   - college: string
+//   - year: string
+//
+// Collection: teams
+// Document ID: teamId
+// Fields:
+//   - leaderId: string (required)
+//   - leaderName: string
+//   - title: string (required)
+//   - description: string
+//   - hackathonId: string (required)
+//   - hackathonName: string
+//   - neededSkills: list
+//   - members: list
+//   - status: string (recruiting/full/completed)
+//   - createdAt: timestamp
+//
+// Collection: organizations
+// Fields:
+//   - name: string
+//   - domain: string
+//
+// Collection: verifiedStudents
+// Fields:
+//   - name: string
+//   - enrollmentNo: string
+//   - branch: string
+//   - instituteName: string
+//   - organizationId: string
+//   - verifiedAt: timestamp
+//
+// Collection: hackathons
+// Fields:
+//   - name: string
+//   - date: string
+//   - location: string
+//   - teamCount: number
+//   - status: string (active/upcoming/completed)
+//
+// ===============================================================
+
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Helper Functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+         (request.auth.token.email == "as1917378@gmail.com"));
+    }
+
+    function isValidUser(data) {
+      return data.keys().hasAll(['uid', 'name', 'email']) &&
+             data.uid is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$");
+    }
+
+    function isValidTeam(data) {
+      return data.keys().hasAll(['leaderId', 'title', 'hackathonId']) &&
+             data.leaderId is string &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 100 &&
+             data.hackathonId is string;
+    }
+
+    function isValidVerifiedStudent(data) {
+      return data.keys().hasAll(['name', 'enrollmentNo', 'branch', 'instituteName', 'organizationId']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.enrollmentNo is string && data.enrollmentNo.size() > 0 && data.enrollmentNo.size() < 50 &&
+             data.branch is string && data.branch.size() > 0 && data.branch.size() < 50 &&
+             data.instituteName is string &&
+             data.organizationId is string;
+    }
+
+    function isValidHackathon(data) {
+      return data.keys().hasAll(['name', 'date', 'location']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.date is string &&
+             data.location is string;
+    }
+
+    function isTeamMember(teamId) {
+      return isAuthenticated() && request.auth.uid in get(/databases/$(database)/documents/teams/$(teamId)).data.members;
+    }
+
+    // Rules
+    match /users/{userId} {
+      allow read: if isAuthenticated();
+      allow create: if isOwner(userId) && isValidUser(request.resource.data);
+      allow update: if (isOwner(userId) || isAdmin());
+      allow delete: if isAdmin();
+    }
+
+    match /teams/{teamId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && isValidTeam(request.resource.data) && request.resource.data.leaderId == request.auth.uid;
+      allow update: if isAuthenticated() && (resource.data.leaderId == request.auth.uid || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.leaderId == request.auth.uid || isAdmin());
+
+      match /messages/{messageId} {
+        allow read: if isTeamMember(teamId);
+        allow create: if isTeamMember(teamId) && request.resource.data.senderId == request.auth.uid;
+      }
+    }
+
+    match /notifications/{notificationId} {
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['read']);
+      allow create: if isAuthenticated();
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
+    }
+
+    match /hackathons/{hackathonId} {
+      allow read: if isAuthenticated();
+      allow create: if isAdmin() && isValidHackathon(request.resource.data);
+      allow update: if isAdmin() && isValidHackathon(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    match /joinRequests/{requestId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.applicantId || request.auth.uid == resource.data.leaderId || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.applicantId == request.auth.uid;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.leaderId || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.applicantId == request.auth.uid || resource.data.leaderId == request.auth.uid || isAdmin());
+    }
+
+    match /invitations/{invitationId} {
+      allow read: if isAuthenticated() && (request.auth.uid == resource.data.inviteeId || request.auth.uid == resource.data.leaderId || isAdmin());
+      allow create: if isAuthenticated() && request.resource.data.leaderId == request.auth.uid;
+      allow update: if isAuthenticated() && (request.auth.uid == resource.data.inviteeId || isAdmin());
+      allow delete: if isAuthenticated() && (resource.data.inviteeId == request.auth.uid || resource.data.leaderId == request.auth.uid || isAdmin());
+    }
+
+    match /organizations/{orgId} {
+      allow read: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /students/{studentId} {
+      allow get: if true;
+      allow list: if isAuthenticated();
+      allow write: if isAdmin();
+    }
+
+    match /verifiedStudents/{studentId} {
+      allow get: if true;
+      allow list: if isAuthenticated();
+      allow create: if isAdmin() && isValidVerifiedStudent(request.resource.data);
+      allow update: if isAdmin() && isValidVerifiedStudent(request.resource.data);
+      allow delete: if isAdmin();
+    }
+  }
+}
